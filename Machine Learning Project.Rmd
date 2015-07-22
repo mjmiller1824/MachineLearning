@@ -1,0 +1,106 @@
+---
+title: "Practical Machine Learning"
+author: "Matthew Miller"
+date: "Tuesday, July 21, 2015"
+output: html_document
+---
+##Loading the Required Packages and setting the seed:
+```{r echo=FALSE}
+if(!require("caret")){
+        install.packages("caret")
+        library(caret)
+}
+if(!require("randomForest")){
+        install.packages("randomForest")
+        library(randomForest)}
+if(!require("RCurl")){
+        install.packages("RCurl")
+        library(RCurl)}
+if(!require("gbm"))
+        install.packages("gbm")
+        library(gbm)
+if(!require("plyr"))
+        install.packages("plyr")
+        library(plyr)
+if(!require("doParallel")){
+        install.packages("doParallel")
+        library(doParallel)
+        
+}
+registerDoParallel(cores=4)
+set.seed(1554)
+```
+##Getting the Data:
+```{r cache=TRUE}
+urltrain<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+urltest<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+x <- getURL(urltrain,ssl.verifypeer = FALSE)
+pretrain<- read.csv(textConnection(x),na.strings=c("","#DIV/0!","NA"))
+write.csv(pretrain,file="~/training.csv")
+rm(x)
+y <- getURL(urltest,ssl.verifypeer = FALSE)
+pretest<- read.csv(textConnection(y),na.strings=c("","#DIV/0!","NA"))#This is the final test set whose results will be uploaded.
+write.csv(pretest,file="~/testing.csv")
+rm(y)
+```
+##Cleaning the Data:
+After observing the raw data, there are a number of columns with mostly NAs (They take the form of: "",NA, and #DIV/0!in the raw dataset and have been converted to NA in the read.csv step). These will be removed.
+```{r cache=TRUE}
+naCount<-sapply(pretrain,function(z){sum(is.na(z))})#Gets number of NAs in each column
+percent<-sapply(naCount,function(a){a/nrow(pretrain)})#Gives percentage of cells that are NA for each column
+trainClean<-pretrain[percent<0.5]#removes columns from pretrain that are at least 50% NAs.
+trainClean<-trainClean[c(-1,-2)]#Removes ID and Names from pretrain to prevent bias.
+```
+#Create a test and train set:
+This will be necessary for the project to calculate the out of sample error later.
+```{r cache=TRUE}
+inTrain<-createDataPartition(y=trainClean$classe,p=0.8, list=FALSE)
+
+training<-trainClean[inTrain,]
+testing<-trainClean[-inTrain,]
+```
+
+##Create repeated K fold Cross Validation sets and boosted model.
+10 folds will be created for cross validation. This will be repeated 3 times with the repeated Cross Validation method. And we will use a boosted model via the gbm method to get our final model. This should enhance our final out come by testing against numerous data samples and averaging the results.
+```{r cache=TRUE}
+folding<-trainControl(method="repeatedcv",repeats=3,number=10)#sets the control options to 3 repetitions and 10 folds for each repetition. 
+model<-train(classe ~ .,data = training,method = "gbm",trControl = folding,verbose=FALSE)#creates a boosted model, with cross validation on the training set.
+
+```
+Because of the use of boosting and 3 times 10 k fold cross validation there is the possibility that the model is overfit to the training sample.
+
+```{r cache=TRUE}
+print(model)
+```
+
+###In sample Error Rate
+The in sample error rate is only 0.4% as can be seen from the model readout above (1-Accuracy of selected model= 1-.996=0.004=0.4%).
+
+To test this we will validate the model using the separated testing set we extracted from the training data earlier. 
+
+##Validate the model using a confusion matrix:
+We'll use the model to predict the test group separated earlier and to get our out of sample error rate. First we'll create a duplicate of the testing set in everything but the classe variable.Then we'll use the predict function with the model created above to predict the outcome of the testing set. 
+```{r}
+testing2<-testing[,-58] #removes the outcome from the set that's being predicted on. 
+classes<-predict(model,testing2)
+```
+Then we'll use confusionMatrix to compare the predicted outcome with the known outcome for the testing set.
+```{r}
+confusionMatrix(classes,testing$classe)
+```
+
+As we can see we have a very high accuracy rate on our new data. 
+
+###Out of Sample Error Rate:
+The out of sample error rate is 0.33%. This is calculated by 1-the Accuracy rate of the testing set or 1-.9967=.0033=0.33%.
+Now it's time to actually apply the model to the final test set.
+
+```{r}
+finalPrediction<-predict(model,pretest)
+```
+
+And we can see that our final answer is:
+```{r}
+print(finalPrediction)
+```
+And when these results were uploaded they were all correct. 
