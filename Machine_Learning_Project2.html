@@ -67,6 +67,10 @@ img {
 </div>
 
 
+<div id="summary" class="section level2">
+<h2>Summary:</h2>
+<p>The purpose of this project is to develop an algorithm to appropriately predict the type of exercise done by 5 participants (categorized as A,B,C,D, or E) given the metrics recorded by Jawbone. A boosted model was used.</p>
+</div>
 <div id="loading-the-required-packages-and-setting-the-seed" class="section level2">
 <h2>Loading the Required Packages and setting the seed:</h2>
 <pre><code>## Loading required package: caret
@@ -141,25 +145,25 @@ model&lt;-train(classe ~ .,data = training,method = &quot;gbm&quot;,trControl = 
 ## Resampling results across tuning parameters:
 ## 
 ##   interaction.depth  n.trees  Accuracy   Kappa      Accuracy SD
-##   1                   50      0.8387780  0.7954130  0.009329088
-##   1                  100      0.8991218  0.8722341  0.007688723
-##   1                  150      0.9269368  0.9074463  0.006266804
-##   2                   50      0.9570870  0.9456709  0.004402799
-##   2                  100      0.9865800  0.9830252  0.002552301
-##   2                  150      0.9921645  0.9900891  0.001954257
-##   3                   50      0.9834375  0.9790494  0.002868928
-##   3                  100      0.9936933  0.9920227  0.001718875
-##   3                  150      0.9967722  0.9959174  0.001296052
+##   1                   50      0.8379917  0.7943947  0.010722308
+##   1                  100      0.8986556  0.8716426  0.006842407
+##   1                  150      0.9260873  0.9063755  0.005918783
+##   2                   50      0.9561956  0.9445449  0.004556614
+##   2                  100      0.9861129  0.9824351  0.002805705
+##   2                  150      0.9920157  0.9899008  0.001937316
+##   3                   50      0.9825458  0.9779221  0.003272601
+##   3                  100      0.9933537  0.9915934  0.001611989
+##   3                  150      0.9966875  0.9958102  0.001311465
 ##   Kappa SD   
-##   0.011907349
-##   0.009764372
-##   0.007941436
-##   0.005576259
-##   0.003227838
-##   0.002471721
-##   0.003627985
-##   0.002174025
-##   0.001639157
+##   0.013705269
+##   0.008662243
+##   0.007499717
+##   0.005768745
+##   0.003547831
+##   0.002450312
+##   0.004138929
+##   0.002038634
+##   0.001658680
 ## 
 ## Tuning parameter 'shrinkage' was held constant at a value of 0.1
 ## 
@@ -169,7 +173,7 @@ model&lt;-train(classe ~ .,data = training,method = &quot;gbm&quot;,trControl = 
 ##  interaction.depth = 3, shrinkage = 0.1 and n.minobsinnode = 10.</code></pre>
 <div id="in-sample-error-rate" class="section level3">
 <h3>In sample Error Rate</h3>
-<p>The in sample error rate is only 0.4% as can be seen from the model readout above (1-Accuracy of selected model= 1-.996=0.004=0.4%).</p>
+<p>The in sample error rate is only 0.33% as can be seen from the model readout above (1-Accuracy of selected model= 1-.9967=0.0033=0.33%).</p>
 <p>To test this we will validate the model using the separated testing set we extracted from the training data earlier.</p>
 </div>
 </div>
@@ -214,7 +218,8 @@ classes&lt;-predict(model,testing2)</code></pre>
 <p>As we can see we have a very high accuracy rate on our new data.</p>
 <div id="out-of-sample-error-rate" class="section level3">
 <h3>Out of Sample Error Rate:</h3>
-<p>The out of sample error rate is 0.33%. This is calculated by 1-the Accuracy rate of the testing set or 1-.9967=.0033=0.33%. Now it’s time to actually apply the model to the final test set.</p>
+<p>The out of sample error rate is 0.28%. This is calculated by 1-the Accuracy rate of the testing set or 1-.9972=.0028=0.28%.Meaning that the model performs approximately as well on the test set and is likely not over fit to the training set.</p>
+<p>Now it’s time to actually apply the model to the final test set.</p>
 <pre class="r"><code>finalPrediction&lt;-predict(model,pretest)</code></pre>
 <p>And we can see that our final answer is:</p>
 <pre class="r"><code>print(finalPrediction)</code></pre>
