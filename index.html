@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Machinelearning by mjmiller1824</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Machinelearning</h1>
+      <h2 class="project-tagline"></h2>
+      <a href="https://github.com/mjmiller1824/MachineLearning" class="btn">View on GitHub</a>
+      <a href="https://github.com/mjmiller1824/MachineLearning/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/mjmiller1824/MachineLearning/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <p>&lt;!DOCTYPE html&gt;</p>
+
+<p></p>
+
+<p></p>
+
+<p>
+
+</p>
+
+<p></p>
+
+<p></p>Practical Machine Learning
+
+
+
+<p>
+</p>
+
+
+
+
+
+
+
+code{white-space: pre;}
+
+<p></p>
+
+
+
+
+  pre:not([class]) {
+    background-color: white;
+  }
+
+
+
+
+<p></p>
+
+<p></p>
+
+
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img { 
+  max-width:100%; 
+  height: auto; 
+}
+
+
+<div>
+
+
+<div id="header">
+<h1>
+<a id="practical-machine-learning" class="anchor" href="#practical-machine-learning" aria-hidden="true"><span class="octicon octicon-link"></span></a>Practical Machine Learning</h1>
+<h4>
+<a id="matthew-miller" class="anchor" href="#matthew-miller" aria-hidden="true"><span class="octicon octicon-link"></span></a><em>Matthew Miller</em>
+</h4>
+<h4>
+<a id="tuesday-july-21-2015" class="anchor" href="#tuesday-july-21-2015" aria-hidden="true"><span class="octicon octicon-link"></span></a><em>Tuesday, July 21, 2015</em>
+</h4>
+</div>
+
+<div id="loading-the-required-packages-and-setting-the-seed">
+<h2>
+<a id="loading-the-required-packages-and-setting-the-seed" class="anchor" href="#loading-the-required-packages-and-setting-the-seed" aria-hidden="true"><span class="octicon octicon-link"></span></a>Loading the Required Packages and setting the seed:</h2>
+<pre><code>## Loading required package: caret
+## Loading required package: lattice
+## Loading required package: ggplot2
+## Loading required package: randomForest
+## randomForest 4.6-10
+## Type rfNews() to see new features/changes/bug fixes.
+## Loading required package: RCurl
+## Loading required package: bitops
+## Loading required package: gbm
+## Loading required package: survival
+## 
+## Attaching package: 'survival'
+## 
+## The following object is masked from 'package:caret':
+## 
+##     cluster
+## 
+## Loading required package: splines
+## Loading required package: parallel
+## Loaded gbm 2.1.1
+## Loading required package: plyr
+## Loading required package: doParallel
+## Loading required package: foreach
+## Loading required package: iterators</code></pre>
+</div>
+
+<div id="getting-the-data">
+<h2>
+<a id="getting-the-data" class="anchor" href="#getting-the-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Getting the Data:</h2>
+<pre><code>urltrain&lt;-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+urltest&lt;-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+x &lt;- getURL(urltrain,ssl.verifypeer = FALSE)
+pretrain&lt;- read.csv(textConnection(x),na.strings=c("","#DIV/0!","NA"))
+write.csv(pretrain,file="~/training.csv")
+rm(x)
+y &lt;- getURL(urltest,ssl.verifypeer = FALSE)
+pretest&lt;- read.csv(textConnection(y),na.strings=c("","#DIV/0!","NA"))#This is the final test set whose results will be uploaded.
+write.csv(pretest,file="~/testing.csv")
+rm(y)</code></pre>
+</div>
+
+<div id="cleaning-the-data">
+<h2>
+<a id="cleaning-the-data" class="anchor" href="#cleaning-the-data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Cleaning the Data:</h2>
+<p>After observing the raw data, there are a number of columns with mostly NAs (They take the form of: “”,NA, and #DIV/0!in the raw dataset and have been converted to NA in the read.csv step). These will be removed.</p>
+<pre><code>naCount&lt;-sapply(pretrain,function(z){sum(is.na(z))})#Gets number of NAs in each column
+percent&lt;-sapply(naCount,function(a){a/nrow(pretrain)})#Gives percentage of cells that are NA for each column
+trainClean&lt;-pretrain[percent&lt;0.5]#removes columns from pretrain that are at least 50% NAs.
+trainClean&lt;-trainClean[c(-1,-2)]#Removes ID and Names from pretrain to prevent bias.</code></pre>
+</div>
+
+<div id="create-a-test-and-train-set">
+<h1>
+<a id="create-a-test-and-train-set" class="anchor" href="#create-a-test-and-train-set" aria-hidden="true"><span class="octicon octicon-link"></span></a>Create a test and train set:</h1>
+<p>This will be necessary for the project to calculate the out of sample error later.</p>
+<pre><code>inTrain&lt;-createDataPartition(y=trainClean$classe,p=0.8, list=FALSE)
+
+training&lt;-trainClean[inTrain,]
+testing&lt;-trainClean[-inTrain,]</code></pre>
+<div id="create-repeated-k-fold-cross-validation-sets-and-boosted-model.">
+<h2>
+<a id="create-repeated-k-fold-cross-validation-sets-and-boosted-model" class="anchor" href="#create-repeated-k-fold-cross-validation-sets-and-boosted-model" aria-hidden="true"><span class="octicon octicon-link"></span></a>Create repeated K fold Cross Validation sets and boosted model.</h2>
+<p>10 folds will be created for cross validation. This will be repeated 3 times with the repeated Cross Validation method. And we will use a boosted model via the gbm method to get our final model. This should enhance our final out come by testing against numerous data samples and averaging the results.</p>
+<pre><code>folding&lt;-trainControl(method="repeatedcv",repeats=3,number=10)#sets the control options to 3 repetitions and 10 folds for each repetition. 
+model&lt;-train(classe ~ .,data = training,method = "gbm",trControl = folding,verbose=FALSE)#creates a boosted model, with cross validation on the training set.</code></pre>
+<p>Because of the use of boosting and 3 times 10 k fold cross validation there is the possibility that the model is overfit to the training sample.</p>
+<pre><code>print(model)</code></pre>
+<pre><code>## Stochastic Gradient Boosting 
+## 
+## 15699 samples
+##    57 predictor
+##     5 classes: 'A', 'B', 'C', 'D', 'E' 
+## 
+## No pre-processing
+## Resampling: Cross-Validated (10 fold, repeated 3 times) 
+## Summary of sample sizes: 14131, 14128, 14128, 14130, 14130, 14129, ... 
+## Resampling results across tuning parameters:
+## 
+##   interaction.depth  n.trees  Accuracy   Kappa      Accuracy SD
+##   1                   50      0.8387780  0.7954130  0.009329088
+##   1                  100      0.8991218  0.8722341  0.007688723
+##   1                  150      0.9269368  0.9074463  0.006266804
+##   2                   50      0.9570870  0.9456709  0.004402799
+##   2                  100      0.9865800  0.9830252  0.002552301
+##   2                  150      0.9921645  0.9900891  0.001954257
+##   3                   50      0.9834375  0.9790494  0.002868928
+##   3                  100      0.9936933  0.9920227  0.001718875
+##   3                  150      0.9967722  0.9959174  0.001296052
+##   Kappa SD   
+##   0.011907349
+##   0.009764372
+##   0.007941436
+##   0.005576259
+##   0.003227838
+##   0.002471721
+##   0.003627985
+##   0.002174025
+##   0.001639157
+## 
+## Tuning parameter 'shrinkage' was held constant at a value of 0.1
+## 
+## Tuning parameter 'n.minobsinnode' was held constant at a value of 10
+## Accuracy was used to select the optimal model using  the largest value.
+## The final values used for the model were n.trees = 150,
+##  interaction.depth = 3, shrinkage = 0.1 and n.minobsinnode = 10.</code></pre>
+<div id="in-sample-error-rate">
+<h3>
+<a id="in-sample-error-rate" class="anchor" href="#in-sample-error-rate" aria-hidden="true"><span class="octicon octicon-link"></span></a>In sample Error Rate</h3>
+<p>The in sample error rate is only 0.4% as can be seen from the model readout above (1-Accuracy of selected model= 1-.996=0.004=0.4%).</p>
+<p>To test this we will validate the model using the separated testing set we extracted from the training data earlier.</p>
+</div>
+
+<p></p>
+</div>
+
+<div id="validate-the-model-using-a-confusion-matrix">
+<h2>
+<a id="validate-the-model-using-a-confusion-matrix" class="anchor" href="#validate-the-model-using-a-confusion-matrix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Validate the model using a confusion matrix:</h2>
+<p>We’ll use the model to predict the test group separated earlier and to get our out of sample error rate. First we’ll create a duplicate of the testing set in everything but the classe variable.Then we’ll use the predict function with the model created above to predict the outcome of the testing set.</p>
+<pre><code>testing2&lt;-testing[,-58] #removes the outcome from the set that's being predicted on. 
+classes&lt;-predict(model,testing2)</code></pre>
+<p>Then we’ll use confusionMatrix to compare the predicted outcome with the known outcome for the testing set.</p>
+<pre><code>confusionMatrix(classes,testing$classe)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1116    1    0    0    0
+##          B    0  756    0    0    0
+##          C    0    2  677    0    0
+##          D    0    0    7  642    0
+##          E    0    0    0    1  721
+## 
+## Overall Statistics
+##                                          
+##                Accuracy : 0.9972         
+##                  95% CI : (0.995, 0.9986)
+##     No Information Rate : 0.2845         
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9965         
+##  Mcnemar's Test P-Value : NA             
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            1.0000   0.9960   0.9898   0.9984   1.0000
+## Specificity            0.9996   1.0000   0.9994   0.9979   0.9997
+## Pos Pred Value         0.9991   1.0000   0.9971   0.9892   0.9986
+## Neg Pred Value         1.0000   0.9991   0.9978   0.9997   1.0000
+## Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+## Detection Rate         0.2845   0.1927   0.1726   0.1637   0.1838
+## Detection Prevalence   0.2847   0.1927   0.1731   0.1654   0.1840
+## Balanced Accuracy      0.9998   0.9980   0.9946   0.9982   0.9998</code></pre>
+<p>As we can see we have a very high accuracy rate on our new data.</p>
+<div id="out-of-sample-error-rate">
+<h3>
+<a id="out-of-sample-error-rate" class="anchor" href="#out-of-sample-error-rate" aria-hidden="true"><span class="octicon octicon-link"></span></a>Out of Sample Error Rate:</h3>
+<p>The out of sample error rate is 0.33%. This is calculated by 1-the Accuracy rate of the testing set or 1-.9967=.0033=0.33%. Now it’s time to actually apply the model to the final test set.</p>
+<pre><code>finalPrediction&lt;-predict(model,pretest)</code></pre>
+<p>And we can see that our final answer is:</p>
+<pre><code>print(finalPrediction)</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E</code></pre>
+<p>And when these results were uploaded they were all correct.</p>
+</div>
+
+<p></p>
+</div>
+</div>
+
+<p></p>
+</div>
+
+
+
+
+
+
+
+<p>
+</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/mjmiller1824/MachineLearning">Machinelearning</a> is maintained by <a href="https://github.com/mjmiller1824">mjmiller1824</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
